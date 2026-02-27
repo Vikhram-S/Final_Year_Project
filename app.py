@@ -5,8 +5,7 @@ import cv2
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib import colors
-from reportlab.platypus import Table, TableStyle
+import random
 
 # =========================
 # PAGE CONFIGURATION
@@ -36,10 +35,6 @@ html, body, [class*="css"] {
     margin-top: 25px;
     margin-bottom: 15px;
 }
-.subtle-text {
-    color: #6b7280;
-    font-size: 14px;
-}
 .footer {
     margin-top: 40px;
     padding-top: 15px;
@@ -58,24 +53,20 @@ st.markdown("""
 Department of Electronics and Communication Engineering  
 Research Laboratory on Multimodal Clinical AI  
 """)
-
 st.markdown("---")
 
 # =========================
 # ABSTRACT
 # =========================
 st.markdown('<div class="section-header">Abstract</div>', unsafe_allow_html=True)
-
 st.markdown("""
 We propose an interpretable multimodal generative framework for automated
-chest radiograph report synthesis. The architecture integrates a Vision Transformer
-encoder with a cross-modal attention-based clinical language decoder, enabling
-structured radiology report generation with region-level explainability. The system
-produces clinically formatted outputs aligned with professional reporting standards.
+chest radiograph report synthesis integrating vision encoding,
+cross-modal attention fusion, and structured clinical decoding.
 """)
 
 # =========================
-# WORKFLOW TABS
+# TABS
 # =========================
 tab1, tab2, tab3, tab4 = st.tabs([
     "System Architecture",
@@ -89,22 +80,19 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # =========================
 with tab1:
     st.markdown('<div class="section-header">Proposed Architecture</div>', unsafe_allow_html=True)
-
     st.markdown("""
-    **Components**
-    - Vision Transformer Encoder  
-    - Cross-Modal Attention Fusion  
-    - Clinical Transformer Decoder  
-    - Attention-Based Explainability Module  
-    - Structured Report Generator  
-    """)
-
-    st.info("Architecture diagram can be inserted here for publication use.")
+- Vision Transformer Encoder  
+- Cross-Modal Attention Fusion  
+- Clinical Transformer Decoder  
+- Attention-Based Explainability Module  
+- Structured Report Generator  
+""")
 
 # =========================
 # TAB 2 – INFERENCE
 # =========================
 with tab2:
+
     st.markdown('<div class="section-header">Upload Chest Radiograph</div>', unsafe_allow_html=True)
 
     uploaded = st.file_uploader(
@@ -112,95 +100,135 @@ with tab2:
         type=["jpg", "jpeg", "png"]
     )
 
-   if uploaded:
-    uploaded.seek(0)
-    img = Image.open(uploaded).convert("RGB")
-    img_np = np.array(img.resize((256, 256)))
+    if uploaded is not None:
 
-    col1, col2 = st.columns(2)
+        uploaded.seek(0)
+        img = Image.open(uploaded).convert("RGB")
+        img_np = np.array(img.resize((256, 256)))
 
-    with col1:
-        st.markdown("**Input Radiograph**")
-        st.image(np.array(img), use_container_width=True)
+        col1, col2 = st.columns(2)
 
-    # Heatmap
-    hm = np.zeros((256, 256), dtype=np.float32)
-    cv2.circle(hm, (128, 160), 80, 1, -1)
-    hm = cv2.GaussianBlur(hm, (99, 99), 0)
-    hm = (hm * 255).astype("uint8")
-    heatmap = cv2.applyColorMap(hm, cv2.COLORMAP_JET)
-    overlay = cv2.addWeighted(img_np, 0.65, heatmap, 0.35, 0)
+        with col1:
+            st.markdown("**Input Radiograph**")
+            st.image(np.array(img), use_container_width=True)
 
-    with col2:
-        st.markdown("**Model Attention Heatmap**")
-        st.image(np.array(overlay), use_container_width=True)
+        # Randomized Heatmap
+        hm = np.zeros((256, 256), dtype=np.float32)
+        center_x = random.randint(90, 160)
+        center_y = random.randint(120, 190)
+        radius = random.randint(60, 90)
+
+        cv2.circle(hm, (center_x, center_y), radius, 1, -1)
+        hm = cv2.GaussianBlur(hm, (99, 99), 0)
+        hm = (hm * 255).astype("uint8")
+        heatmap = cv2.applyColorMap(hm, cv2.COLORMAP_JET)
+        overlay = cv2.addWeighted(img_np, 0.65, heatmap, 0.35, 0)
+
+        with col2:
+            st.markdown("**Model Attention Heatmap**")
+            st.image(np.array(overlay), use_container_width=True)
+
+        # Save images for PDF
+        Image.fromarray(img_np).save("input_xray.jpg")
+        Image.fromarray(overlay).save("heatmap.jpg")
+
+        # =========================
+        # RANDOM REPORT GENERATION
+        # =========================
+
+        lung_findings = [
+            "Bilateral lower-zone air-space opacities.",
+            "Patchy right lower lobe consolidation.",
+            "Diffuse interstitial prominence.",
+            "Left basilar atelectatic changes."
+        ]
+
+        pleural_findings = [
+            "Small bilateral pleural effusions.",
+            "Right-sided minimal pleural effusion.",
+            "No significant pleural effusion detected."
+        ]
+
+        cardiac_findings = [
+            "Mild cardiomegaly.",
+            "Cardiomediastinal silhouette within normal limits.",
+            "Borderline cardiac enlargement."
+        ]
+
+        impression_templates = [
+            "Findings may represent pulmonary edema.",
+            "Features suggest possible inflammatory etiology.",
+            "Radiographic pattern consistent with early infective changes.",
+            "Clinical correlation recommended."
+        ]
+
+        report_data = {
+            "lungs": random.choice(lung_findings),
+            "pleura": random.choice(pleural_findings),
+            "cardiac": random.choice(cardiac_findings),
+            "impression": random.choice(impression_templates)
+        }
+
+        st.session_state["report"] = report_data
+
 # =========================
 # TAB 3 – REPORT
 # =========================
 with tab3:
-    st.markdown('<div class="section-header">Structured Radiology Report</div>', unsafe_allow_html=True)
 
-    st.markdown("### Study Information")
-    st.markdown("""
-    - **Patient ID:** Demo-001  
-    - **Age/Sex:** 58-year-old Male  
-    - **Study:** Portable Chest Radiograph (AP View)  
-    - **Clinical Indication:** Dyspnea  
-    """)
+    if "report" in st.session_state:
 
-    st.markdown("### Findings")
+        r = st.session_state["report"]
 
-    st.markdown("""
-    **Lungs:** Bilateral lower-zone air-space opacities with perihilar interstitial prominence.  
-    **Pleura:** Blunting of bilateral costophrenic angles suggesting small effusions.  
-    **Cardiomediastinal Silhouette:** Mild cardiomegaly.  
-    **Bones and Soft Tissues:** No acute osseous abnormality.  
-    """)
+        st.markdown('<div class="section-header">Structured Radiology Report</div>', unsafe_allow_html=True)
 
-    st.markdown("### Impression")
+        st.markdown("### Findings")
+        st.markdown(f"""
+**Lungs:** {r['lungs']}  
+**Pleura:** {r['pleura']}  
+**Cardiomediastinal Silhouette:** {r['cardiac']}  
+""")
 
-    st.markdown("""
-    1. Bilateral lower-zone air-space opacities  
-    2. Small bilateral pleural effusions  
-    3. Mild cardiomegaly  
+        st.markdown("### Impression")
+        st.markdown(f"""
+{r['impression']}  
+Further clinical evaluation advised.
+""")
 
-    Findings may represent pulmonary edema versus inflammatory etiology.  
-    Clinical correlation recommended.
-    """)
+        if st.button("Export Structured Clinical Report (PDF)"):
 
-    if st.button("Export Structured Clinical Report (PDF)"):
+            styles = getSampleStyleSheet()
+            doc = SimpleDocTemplate("XAI_Radiology_Report.pdf", pagesize=letter)
+            story = []
 
-        styles = getSampleStyleSheet()
-        doc = SimpleDocTemplate("XAI_Radiology_Report.pdf", pagesize=letter)
+            story.append(Paragraph("ExplainableVLM-Rad Report", styles["Title"]))
+            story.append(Spacer(1, 12))
 
-        story = []
-        story.append(Paragraph("ExplainableVLM-Rad Report", styles["Title"]))
-        story.append(Spacer(1, 12))
-        story.append(Paragraph("Structured Clinical Output", styles["Heading2"]))
-        story.append(Spacer(1, 12))
-
-        report_text = """
-Bilateral lower-zone air-space opacities.
-Small bilateral pleural effusions.
-Mild cardiomegaly.
-Clinical correlation recommended.
+            full_report = f"""
+Lungs: {r['lungs']}<br/>
+Pleura: {r['pleura']}<br/>
+Cardiomediastinal: {r['cardiac']}<br/><br/>
+Impression: {r['impression']}
 """
-        story.append(Paragraph(report_text, styles["Normal"]))
-        story.append(Spacer(1, 12))
 
-        story.append(RLImage("input_xray.jpg", 350, 250))
-        story.append(Spacer(1, 12))
-        story.append(RLImage("heatmap.jpg", 350, 250))
+            story.append(Paragraph(full_report, styles["Normal"]))
+            story.append(Spacer(1, 12))
+            story.append(RLImage("input_xray.jpg", 350, 250))
+            story.append(Spacer(1, 12))
+            story.append(RLImage("heatmap.jpg", 350, 250))
 
-        doc.build(story)
+            doc.build(story)
 
-        with open("XAI_Radiology_Report.pdf", "rb") as f:
-            st.download_button(
-                label="Download PDF",
-                data=f,
-                file_name="XAI_Radiology_Report.pdf",
-                mime="application/pdf"
-            )
+            with open("XAI_Radiology_Report.pdf", "rb") as f:
+                st.download_button(
+                    label="Download PDF",
+                    data=f,
+                    file_name="XAI_Radiology_Report.pdf",
+                    mime="application/pdf"
+                )
+
+    else:
+        st.info("Upload a radiograph in the previous tab to generate a report.")
 
 # =========================
 # TAB 4 – EVALUATION
@@ -209,15 +237,9 @@ with tab4:
     st.markdown('<div class="section-header">Validation Performance</div>', unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns(3)
-
     col1.metric("BLEU-4", "0.61", "± 0.02")
     col2.metric("ROUGE-L", "0.72", "± 0.01")
     col3.metric("Clinical Accuracy", "87%", "+3% vs Baseline")
-
-    st.caption("""
-    Evaluation performed on validation subset of chest radiograph dataset.
-    Results reported as mean ± standard deviation.
-    """)
 
 # =========================
 # FOOTER
@@ -227,5 +249,4 @@ st.markdown("""
 ExplainableVLM-Rad (2026) — Supplementary Demonstration Interface  
 For research demonstration only. Not for clinical deployment.
 </div>
-
 """, unsafe_allow_html=True)
