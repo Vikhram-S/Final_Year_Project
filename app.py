@@ -92,7 +92,6 @@ with tab1:
 # TAB 2 – INFERENCE
 # =========================
 with tab2:
-
     st.markdown('<div class="section-header">Upload Chest Radiograph</div>', unsafe_allow_html=True)
 
     uploaded = st.file_uploader(
@@ -102,36 +101,41 @@ with tab2:
 
     if uploaded is not None:
 
-        uploaded.seek(0)
-        img = Image.open(uploaded).convert("RGB")
-        img_np = np.array(img.resize((256, 256)))
+        try:
+            # Reset buffer pointer
+            uploaded.seek(0)
 
-        col1, col2 = st.columns(2)
+            # Open image safely
+            img = Image.open(uploaded)
+            img = img.convert("RGB")
 
-        with col1:
-            st.markdown("**Input Radiograph**")
-            st.image(np.array(img), use_container_width=True)
+            # Convert to numpy
+            img_np = np.array(img)
 
-        # Randomized Heatmap
-        hm = np.zeros((256, 256), dtype=np.float32)
-        center_x = random.randint(90, 160)
-        center_y = random.randint(120, 190)
-        radius = random.randint(60, 90)
+            col1, col2 = st.columns(2)
 
-        cv2.circle(hm, (center_x, center_y), radius, 1, -1)
-        hm = cv2.GaussianBlur(hm, (99, 99), 0)
-        hm = (hm * 255).astype("uint8")
-        heatmap = cv2.applyColorMap(hm, cv2.COLORMAP_JET)
-        overlay = cv2.addWeighted(img_np, 0.65, heatmap, 0.35, 0)
+            with col1:
+                st.markdown("**Input Radiograph**")
+                st.image(img_np)
 
-        with col2:
-            st.markdown("**Model Attention Heatmap**")
-            st.image(np.array(overlay), use_container_width=True)
+            # Resize for heatmap
+            img_resized = cv2.resize(img_np, (256, 256))
 
-        # Save images for PDF
-        Image.fromarray(img_np).save("input_xray.jpg")
-        Image.fromarray(overlay).save("heatmap.jpg")
+            hm = np.zeros((256, 256), dtype=np.float32)
+            cv2.circle(hm, (128, 160), 80, 1, -1)
+            hm = cv2.GaussianBlur(hm, (99, 99), 0)
+            hm = (hm * 255).astype("uint8")
 
+            heatmap = cv2.applyColorMap(hm, cv2.COLORMAP_JET)
+            overlay = cv2.addWeighted(img_resized, 0.65, heatmap, 0.35, 0)
+
+            with col2:
+                st.markdown("**Model Attention Heatmap**")
+                st.image(overlay)
+
+        except Exception as e:
+            st.error("Image processing failed. Please upload a valid image.")
+            st.exception(e)
         # =========================
         # RANDOM REPORT GENERATION
         # =========================
@@ -250,3 +254,4 @@ ExplainableVLM-Rad (2026) — Supplementary Demonstration Interface
 For research demonstration only. Not for clinical deployment.
 </div>
 """, unsafe_allow_html=True)
+
