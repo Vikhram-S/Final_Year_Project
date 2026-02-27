@@ -112,35 +112,28 @@ with tab2:
         type=["jpg", "jpeg", "png"]
     )
 
-    if uploaded:
+   if uploaded:
+    uploaded.seek(0)
+    img = Image.open(uploaded).convert("RGB")
+    img_np = np.array(img.resize((256, 256)))
 
-        img = Image.open(uploaded).convert("RGB")
-        img_np = np.array(img.resize((256, 256)))
+    col1, col2 = st.columns(2)
 
-        col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Input Radiograph**")
+        st.image(np.array(img), use_container_width=True)
 
-        with col1:
-            st.markdown("**Input Radiograph**")
-            st.image(img, use_container_width=True)
+    # Heatmap
+    hm = np.zeros((256, 256), dtype=np.float32)
+    cv2.circle(hm, (128, 160), 80, 1, -1)
+    hm = cv2.GaussianBlur(hm, (99, 99), 0)
+    hm = (hm * 255).astype("uint8")
+    heatmap = cv2.applyColorMap(hm, cv2.COLORMAP_JET)
+    overlay = cv2.addWeighted(img_np, 0.65, heatmap, 0.35, 0)
 
-        # Simulated attention map
-        hm = np.zeros((256, 256), dtype=np.float32)
-        cv2.circle(hm, (128, 160), 80, 1, -1)
-        hm = cv2.GaussianBlur(hm, (99, 99), 0)
-        hm = (hm * 255).astype("uint8")
-        heatmap = cv2.applyColorMap(hm, cv2.COLORMAP_JET)
-        overlay = cv2.addWeighted(img_np, 0.65, heatmap, 0.35, 0)
-
-        with col2:
-            st.markdown("**Model Attention Heatmap**")
-            st.image(overlay, use_container_width=True)
-
-        st.caption("Heatmap reflects cross-modal attention alignment between visual encoder and language decoder.")
-
-        # Save images for PDF
-        Image.fromarray(img_np).save("input_xray.jpg")
-        Image.fromarray(overlay).save("heatmap.jpg")
-
+    with col2:
+        st.markdown("**Model Attention Heatmap**")
+        st.image(np.array(overlay), use_container_width=True)
 # =========================
 # TAB 3 – REPORT
 # =========================
@@ -234,4 +227,5 @@ st.markdown("""
 ExplainableVLM-Rad (2026) — Supplementary Demonstration Interface  
 For research demonstration only. Not for clinical deployment.
 </div>
+
 """, unsafe_allow_html=True)
