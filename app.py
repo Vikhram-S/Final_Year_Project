@@ -162,6 +162,7 @@ with tab2:
             st.error("Image processing failed.")
             st.exception(e)
 
+
 # =========================
 # TAB 3 – REPORT
 # =========================
@@ -240,3 +241,4 @@ ExplainableVLM-Rad (2026) — Research Demonstration Interface
 Not for clinical deployment.
 </div>
 """, unsafe_allow_html=True)
+
